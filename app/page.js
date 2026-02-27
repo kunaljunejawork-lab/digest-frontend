@@ -103,7 +103,7 @@ export default function App() {
   };
 
 const handleConfirm = async () => {
-    await fetch('https://YOUR-APP.onrender.com/subscribe', {
+    await fetch('digest-bot-production.up.railway.app', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
