@@ -69,7 +69,7 @@ const TYPE_META = {
 
 const FILTERS = ["all", "podcast", "newsletter", "youtube"];
 
-const API_URL = "digest-bot-production.up.railway.app";
+const API_URL = "https://digest-bot-production.up.railway.app";
 
 export default function App() {
   const [selected, setSelected] = useState(new Set());
