@@ -107,26 +107,73 @@ export default function App() {
     setStep("confirm");
   };
 
-  const handleConfirm = async () => {
+ const handleConfirm = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API_URL}/subscribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          feeds: selectedFeeds.map(f => ({ name: f.name, url: f.url, type: f.type }))
-        })
-      });
-      if (!res.ok) throw new Error("Subscription failed");
-      setStep("done");
+        // Step 1 — Save to database via API
+        const res = await fetch(`${API_URL}/subscribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                email,
+                feeds: selectedFeeds.map(f => ({ name: f.name, url: f.url, type: f.type }))
+            })
+        });
+        if (!res.ok) throw new Error("Subscription failed");
+
+        // Step 2 — Send welcome email directly from frontend via Resend
+        const feedList = selectedFeeds.map(f => {
+            const icons = { podcast: "🎙️", newsletter: "📨", youtube: "▶️" };
+            return `<div style="margin:8px 0;font-size:14px">${icons[f.type] || "📌"} ${f.name}</div>`;
+        }).join("");
+
+        await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer re_83weCBCh_HUeLrWvpixkZFQsGEd5LeSBs",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                from: "onboarding@resend.dev",
+                to: [email],
+                subject: "✦ Welcome to Digest",
+                html: `
+                <div style="font-family:Georgia,serif;max-width:600px;margin:auto;color:#222">
+                  <div style="background:#0D0D0D;padding:32px;text-align:center">
+                    <div style="font-family:monospace;font-size:11px;letter-spacing:0.3em;color:#FFE66D">✦ DIGEST</div>
+                    <h1 style="color:#F0EDE8;font-size:24px;margin-top:16px">Welcome aboard.</h1>
+                  </div>
+                  <div style="padding:32px">
+                    <p style="font-size:15px;line-height:1.7;color:#444">
+                      You are now subscribed to Digest. Every day we will check your feeds
+                      and send you a summary of anything new straight to your inbox.
+                    </p>
+                    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.1em;color:#888;font-family:monospace">
+                      Your feeds
+                    </h3>
+                    <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin-bottom:24px">
+                      ${feedList}
+                    </div>
+                    <p style="font-size:13px;color:#888;line-height:1.6">
+                      Your first digest will arrive within 28 hours if there is something new.
+                    </p>
+                  </div>
+                  <div style="background:#f9f9f9;padding:20px;text-align:center;border-top:1px solid #eee">
+                    <p style="font-size:11px;color:#aaa;font-family:monospace;margin:0">✦ digest</p>
+                  </div>
+                </div>
+                `
+            })
+        });
+
+        setStep("done");
     } catch (e) {
-      setError("Something went wrong. Please try again.");
+        setError("Something went wrong. Please try again.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   const selectedFeeds = allFeeds.filter(f => selected.has(f.id));
 
