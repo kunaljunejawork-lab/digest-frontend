@@ -7,16 +7,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-```
-
-Click **Commit new file**
-
----
-
-Your repo should now look like:
-```
-digest-frontend/
-├── app/
-│   ├── layout.js    ← new file
-│   └── page.js
-└── package.json
