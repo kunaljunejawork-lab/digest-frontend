@@ -102,11 +102,43 @@ export default function App() {
     setStep("confirm");
   };
 
-  const handleConfirm = () => {
-    // In real app: POST to your backend/API
-    // fetch('/api/subscribe', { method: 'POST', body: JSON.stringify({ email, feeds: [...selected] }) })
+const handleConfirm = async () => {
+    await fetch('https://YOUR-APP.onrender.com/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email,
+            feeds: selectedFeeds.map(f => ({ name: f.name, url: f.url, type: f.type }))
+        })
+    });
     setStep("done");
-  };
+};
+```
+
+Replace `YOUR-APP.onrender.com` with your actual Render URL.
+
+Click **Commit new file**
+
+---
+
+## Step 5 — Deploy on Vercel
+
+1. Go to **vercel.com** → Sign up with GitHub
+2. Click **Add New → Project**
+3. Find `digest-frontend` → click **Import**
+4. Leave everything as default → click **Deploy**
+5. Wait ~1 minute → Vercel gives you a live URL like `https://digest-frontend.vercel.app`
+
+---
+
+## That's it!
+
+Your repo should look like this:
+```
+digest-frontend/
+├── app/
+│   └── page.js      ← your full frontend code
+└── package.json
 
   const selectedFeeds = allFeeds.filter(f => selected.has(f.id));
 
