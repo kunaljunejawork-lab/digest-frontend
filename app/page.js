@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 
 const FEEDS = [
@@ -68,14 +69,18 @@ const TYPE_META = {
 
 const FILTERS = ["all", "podcast", "newsletter", "youtube"];
 
+const API_URL = "https://YOUR-APP.onrender.com";
+
 export default function App() {
   const [selected, setSelected] = useState(new Set());
   const [email, setEmail] = useState("");
   const [filter, setFilter] = useState("all");
-  const [step, setStep] = useState("browse"); // browse | confirm | done
+  const [step, setStep] = useState("browse");
   const [customFeed, setCustomFeed] = useState({ name: "", url: "", type: "podcast" });
   const [customFeeds, setCustomFeeds] = useState([]);
   const [showCustomForm, setShowCustomForm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const toggle = (id) => {
     setSelected(prev => {
@@ -102,43 +107,26 @@ export default function App() {
     setStep("confirm");
   };
 
-const handleConfirm = async () => {
-    await fetch('digest-bot-production.up.railway.app', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+  const handleConfirm = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_URL}/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            email,
-            feeds: selectedFeeds.map(f => ({ name: f.name, url: f.url, type: f.type }))
+          email,
+          feeds: selectedFeeds.map(f => ({ name: f.name, url: f.url, type: f.type }))
         })
-    });
-    setStep("done");
-};
-```
-
-Replace `YOUR-APP.onrender.com` with your actual Render URL.
-
-Click **Commit new file**
-
----
-
-## Step 5 — Deploy on Vercel
-
-1. Go to **vercel.com** → Sign up with GitHub
-2. Click **Add New → Project**
-3. Find `digest-frontend` → click **Import**
-4. Leave everything as default → click **Deploy**
-5. Wait ~1 minute → Vercel gives you a live URL like `https://digest-frontend.vercel.app`
-
----
-
-## That's it!
-
-Your repo should look like this:
-```
-digest-frontend/
-├── app/
-│   └── page.js      ← your full frontend code
-└── package.json
+      });
+      if (!res.ok) throw new Error("Subscription failed");
+      setStep("done");
+    } catch (e) {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const selectedFeeds = allFeeds.filter(f => selected.has(f.id));
 
@@ -172,7 +160,7 @@ digest-frontend/
       <div style={styles.page}>
         <div style={styles.confirmCard}>
           <h2 style={styles.confirmTitle}>Confirm your digest</h2>
-          <p style={styles.confirmSub}>Summaries will be sent to <strong>{email}</strong> every 28 hours when there's something new.</p>
+          <p style={styles.confirmSub}>Summaries will be sent to <strong>{email}</strong> every 28 hours when there is something new.</p>
           <div style={styles.confirmList}>
             {selectedFeeds.map(f => {
               const meta = TYPE_META[f.type];
@@ -187,9 +175,12 @@ digest-frontend/
               );
             })}
           </div>
+          {error && <p style={{ color: "#FF6B6B", fontSize: "13px", fontFamily: "monospace" }}>{error}</p>}
           <div style={styles.confirmActions}>
             <button style={styles.backBtn} onClick={() => setStep("browse")}>← Back</button>
-            <button style={styles.confirmBtn} onClick={handleConfirm}>Confirm & Subscribe ✦</button>
+            <button style={{ ...styles.confirmBtn, opacity: loading ? 0.6 : 1 }} onClick={handleConfirm} disabled={loading}>
+              {loading ? "Subscribing..." : "Confirm & Subscribe ✦"}
+            </button>
           </div>
         </div>
       </div>
@@ -198,7 +189,6 @@ digest-frontend/
 
   return (
     <div style={styles.page}>
-      {/* Header */}
       <header style={styles.header}>
         <div style={styles.logo}>✦ digest</div>
         <p style={styles.tagline}>
@@ -207,7 +197,6 @@ digest-frontend/
         </p>
       </header>
 
-      {/* Filter tabs */}
       <div style={styles.filters}>
         {FILTERS.map(f => (
           <button
@@ -220,7 +209,6 @@ digest-frontend/
         ))}
       </div>
 
-      {/* Feed grid */}
       <div style={styles.grid}>
         {visible.map(feed => {
           const meta = TYPE_META[feed.type];
@@ -245,7 +233,6 @@ digest-frontend/
           );
         })}
 
-        {/* Add custom feed card */}
         <div style={styles.addCard} onClick={() => setShowCustomForm(true)}>
           <div style={styles.addIcon}>+</div>
           <div style={styles.addLabel}>Add your own feed</div>
@@ -253,7 +240,6 @@ digest-frontend/
         </div>
       </div>
 
-      {/* Custom feed form */}
       {showCustomForm && (
         <div style={styles.overlay} onClick={() => setShowCustomForm(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
@@ -289,7 +275,6 @@ digest-frontend/
         </div>
       )}
 
-      {/* Sticky subscribe bar */}
       <div style={styles.stickyBar}>
         <div style={styles.stickyInner}>
           <div style={styles.stickyCount}>
@@ -322,365 +307,55 @@ digest-frontend/
 }
 
 const styles = {
-  page: {
-    minHeight: "100vh",
-    background: "#0D0D0D",
-    color: "#F0EDE8",
-    fontFamily: "'Georgia', serif",
-    paddingBottom: "120px",
-  },
-  header: {
-    textAlign: "center",
-    padding: "64px 24px 40px",
-    borderBottom: "1px solid #222",
-  },
-  logo: {
-    fontSize: "13px",
-    letterSpacing: "0.3em",
-    textTransform: "uppercase",
-    color: "#FFE66D",
-    marginBottom: "20px",
-    fontFamily: "monospace",
-  },
-  tagline: {
-    fontSize: "28px",
-    fontWeight: "400",
-    lineHeight: "1.5",
-    color: "#F0EDE8",
-    maxWidth: "500px",
-    margin: "0 auto",
-  },
-  filters: {
-    display: "flex",
-    gap: "8px",
-    justifyContent: "center",
-    padding: "32px 24px 24px",
-    flexWrap: "wrap",
-  },
-  filterBtn: {
-    padding: "8px 20px",
-    borderRadius: "100px",
-    border: "1px solid #333",
-    background: "transparent",
-    color: "#888",
-    cursor: "pointer",
-    fontSize: "13px",
-    fontFamily: "monospace",
-    letterSpacing: "0.05em",
-    transition: "all 0.15s",
-  },
-  filterActive: {
-    background: "#F0EDE8",
-    color: "#0D0D0D",
-    border: "1px solid #F0EDE8",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-    gap: "16px",
-    maxWidth: "900px",
-    margin: "0 auto",
-    padding: "0 24px",
-  },
-  card: {
-    background: "#161616",
-    border: "1px solid #222",
-    borderRadius: "12px",
-    padding: "20px",
-    cursor: "pointer",
-    transition: "all 0.15s",
-    userSelect: "none",
-  },
-  cardSelected: {
-    border: "1px solid #FFE66D",
-    background: "#1A1900",
-  },
-  cardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "14px",
-  },
-  typeBadge: {
-    fontSize: "11px",
-    padding: "3px 10px",
-    borderRadius: "100px",
-    fontFamily: "monospace",
-    letterSpacing: "0.05em",
-  },
-  checkbox: {
-    width: "20px",
-    height: "20px",
-    borderRadius: "50%",
-    border: "1.5px solid #444",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "all 0.15s",
-  },
-  checkboxOn: {
-    background: "#FFE66D",
-    border: "1.5px solid #FFE66D",
-  },
-  checkmark: {
-    fontSize: "11px",
-    color: "#0D0D0D",
-    fontWeight: "bold",
-  },
-  cardName: {
-    fontSize: "15px",
-    fontWeight: "600",
-    marginBottom: "6px",
-    color: "#F0EDE8",
-  },
-  cardDesc: {
-    fontSize: "12px",
-    color: "#666",
-    lineHeight: "1.5",
-  },
-  addCard: {
-    background: "transparent",
-    border: "1px dashed #333",
-    borderRadius: "12px",
-    padding: "20px",
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "120px",
-    gap: "6px",
-    transition: "all 0.15s",
-  },
-  addIcon: {
-    fontSize: "24px",
-    color: "#444",
-  },
-  addLabel: {
-    fontSize: "13px",
-    color: "#555",
-  },
-  addSub: {
-    fontSize: "11px",
-    color: "#444",
-  },
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.8)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 100,
-    padding: "24px",
-  },
-  modal: {
-    background: "#161616",
-    border: "1px solid #333",
-    borderRadius: "16px",
-    padding: "32px",
-    width: "100%",
-    maxWidth: "420px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  modalTitle: {
-    margin: "0 0 8px",
-    fontSize: "18px",
-    color: "#F0EDE8",
-  },
-  input: {
-    background: "#0D0D0D",
-    border: "1px solid #333",
-    borderRadius: "8px",
-    padding: "12px 14px",
-    color: "#F0EDE8",
-    fontSize: "14px",
-    fontFamily: "monospace",
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
-  },
-  typeRow: {
-    display: "flex",
-    gap: "8px",
-  },
-  typeBtn: {
-    flex: 1,
-    padding: "8px",
-    borderRadius: "8px",
-    border: "1px solid #333",
-    background: "transparent",
-    color: "#666",
-    cursor: "pointer",
-    fontSize: "12px",
-    fontFamily: "monospace",
-  },
-  typeBtnActive: {
-    border: "1px solid #FFE66D",
-    color: "#FFE66D",
-    background: "#1A1900",
-  },
-  modalActions: {
-    display: "flex",
-    gap: "8px",
-    marginTop: "8px",
-  },
-  stickyBar: {
-    position: "fixed",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: "#111",
-    borderTop: "1px solid #222",
-    padding: "16px 24px",
-    zIndex: 50,
-  },
-  stickyInner: {
-    maxWidth: "900px",
-    margin: "0 auto",
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  stickyCount: {
-    fontSize: "13px",
-    color: "#888",
-    minWidth: "120px",
-    fontFamily: "monospace",
-  },
-  emailInput: {
-    flex: 1,
-    background: "#0D0D0D",
-    border: "1px solid #333",
-    borderRadius: "8px",
-    padding: "10px 14px",
-    color: "#F0EDE8",
-    fontSize: "14px",
-    fontFamily: "monospace",
-    outline: "none",
-    minWidth: "200px",
-  },
-  subscribeBtn: {
-    background: "#FFE66D",
-    color: "#0D0D0D",
-    border: "none",
-    borderRadius: "8px",
-    padding: "10px 24px",
-    fontSize: "14px",
-    fontWeight: "700",
-    fontFamily: "monospace",
-    letterSpacing: "0.05em",
-    whiteSpace: "nowrap",
-    transition: "opacity 0.15s",
-  },
-  // Confirm & Done screens
-  confirmCard: {
-    maxWidth: "520px",
-    margin: "80px auto",
-    background: "#161616",
-    border: "1px solid #222",
-    borderRadius: "16px",
-    padding: "40px",
-  },
-  confirmTitle: {
-    margin: "0 0 8px",
-    fontSize: "22px",
-  },
-  confirmSub: {
-    color: "#888",
-    fontSize: "14px",
-    marginBottom: "24px",
-    lineHeight: "1.6",
-  },
-  confirmList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    marginBottom: "28px",
-  },
-  confirmItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-  },
-  confirmDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    flexShrink: 0,
-  },
-  confirmName: {
-    fontSize: "14px",
-    color: "#F0EDE8",
-  },
-  confirmType: {
-    fontSize: "11px",
-    color: "#555",
-    fontFamily: "monospace",
-  },
-  confirmActions: {
-    display: "flex",
-    gap: "12px",
-  },
-  confirmBtn: {
-    background: "#FFE66D",
-    color: "#0D0D0D",
-    border: "none",
-    borderRadius: "8px",
-    padding: "10px 24px",
-    fontSize: "14px",
-    fontWeight: "700",
-    fontFamily: "monospace",
-    cursor: "pointer",
-  },
-  backBtn: {
-    background: "transparent",
-    color: "#888",
-    border: "1px solid #333",
-    borderRadius: "8px",
-    padding: "10px 20px",
-    fontSize: "14px",
-    fontFamily: "monospace",
-    cursor: "pointer",
-  },
-  doneCard: {
-    maxWidth: "480px",
-    margin: "100px auto",
-    textAlign: "center",
-    padding: "40px",
-  },
-  doneIcon: {
-    fontSize: "48px",
-    color: "#FFE66D",
-    marginBottom: "20px",
-  },
-  doneTitle: {
-    fontSize: "28px",
-    margin: "0 0 12px",
-  },
-  doneText: {
-    color: "#888",
-    lineHeight: "1.7",
-    marginBottom: "24px",
-  },
-  doneFeeds: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
-    justifyContent: "center",
-    marginBottom: "32px",
-  },
-  donePill: {
-    background: "#1A1900",
-    border: "1px solid #FFE66D33",
-    color: "#FFE66D",
-    padding: "4px 12px",
-    borderRadius: "100px",
-    fontSize: "12px",
-    fontFamily: "monospace",
-  },
+  page: { minHeight: "100vh", background: "#0D0D0D", color: "#F0EDE8", fontFamily: "'Georgia', serif", paddingBottom: "120px" },
+  header: { textAlign: "center", padding: "64px 24px 40px", borderBottom: "1px solid #222" },
+  logo: { fontSize: "13px", letterSpacing: "0.3em", textTransform: "uppercase", color: "#FFE66D", marginBottom: "20px", fontFamily: "monospace" },
+  tagline: { fontSize: "28px", fontWeight: "400", lineHeight: "1.5", color: "#F0EDE8", maxWidth: "500px", margin: "0 auto" },
+  filters: { display: "flex", gap: "8px", justifyContent: "center", padding: "32px 24px 24px", flexWrap: "wrap" },
+  filterBtn: { padding: "8px 20px", borderRadius: "100px", border: "1px solid #333", background: "transparent", color: "#888", cursor: "pointer", fontSize: "13px", fontFamily: "monospace", letterSpacing: "0.05em" },
+  filterActive: { background: "#F0EDE8", color: "#0D0D0D", border: "1px solid #F0EDE8" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px", maxWidth: "900px", margin: "0 auto", padding: "0 24px" },
+  card: { background: "#161616", border: "1px solid #222", borderRadius: "12px", padding: "20px", cursor: "pointer", transition: "all 0.15s", userSelect: "none" },
+  cardSelected: { border: "1px solid #FFE66D", background: "#1A1900" },
+  cardTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" },
+  typeBadge: { fontSize: "11px", padding: "3px 10px", borderRadius: "100px", fontFamily: "monospace", letterSpacing: "0.05em" },
+  checkbox: { width: "20px", height: "20px", borderRadius: "50%", border: "1.5px solid #444", display: "flex", alignItems: "center", justifyContent: "center" },
+  checkboxOn: { background: "#FFE66D", border: "1.5px solid #FFE66D" },
+  checkmark: { fontSize: "11px", color: "#0D0D0D", fontWeight: "bold" },
+  cardName: { fontSize: "15px", fontWeight: "600", marginBottom: "6px", color: "#F0EDE8" },
+  cardDesc: { fontSize: "12px", color: "#666", lineHeight: "1.5" },
+  addCard: { background: "transparent", border: "1px dashed #333", borderRadius: "12px", padding: "20px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "120px", gap: "6px" },
+  addIcon: { fontSize: "24px", color: "#444" },
+  addLabel: { fontSize: "13px", color: "#555" },
+  addSub: { fontSize: "11px", color: "#444" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "24px" },
+  modal: { background: "#161616", border: "1px solid #333", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "420px", display: "flex", flexDirection: "column", gap: "12px" },
+  modalTitle: { margin: "0 0 8px", fontSize: "18px", color: "#F0EDE8" },
+  input: { background: "#0D0D0D", border: "1px solid #333", borderRadius: "8px", padding: "12px 14px", color: "#F0EDE8", fontSize: "14px", fontFamily: "monospace", outline: "none", width: "100%", boxSizing: "border-box" },
+  typeRow: { display: "flex", gap: "8px" },
+  typeBtn: { flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #333", background: "transparent", color: "#666", cursor: "pointer", fontSize: "12px", fontFamily: "monospace" },
+  typeBtnActive: { border: "1px solid #FFE66D", color: "#FFE66D", background: "#1A1900" },
+  modalActions: { display: "flex", gap: "8px", marginTop: "8px" },
+  stickyBar: { position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "16px 24px", zIndex: 50 },
+  stickyInner: { maxWidth: "900px", margin: "0 auto", display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" },
+  stickyCount: { fontSize: "13px", color: "#888", minWidth: "120px", fontFamily: "monospace" },
+  emailInput: { flex: 1, background: "#0D0D0D", border: "1px solid #333", borderRadius: "8px", padding: "10px 14px", color: "#F0EDE8", fontSize: "14px", fontFamily: "monospace", outline: "none", minWidth: "200px" },
+  subscribeBtn: { background: "#FFE66D", color: "#0D0D0D", border: "none", borderRadius: "8px", padding: "10px 24px", fontSize: "14px", fontWeight: "700", fontFamily: "monospace", letterSpacing: "0.05em", whiteSpace: "nowrap" },
+  confirmCard: { maxWidth: "520px", margin: "80px auto", background: "#161616", border: "1px solid #222", borderRadius: "16px", padding: "40px" },
+  confirmTitle: { margin: "0 0 8px", fontSize: "22px" },
+  confirmSub: { color: "#888", fontSize: "14px", marginBottom: "24px", lineHeight: "1.6" },
+  confirmList: { display: "flex", flexDirection: "column", gap: "12px", marginBottom: "28px" },
+  confirmItem: { display: "flex", alignItems: "center", gap: "14px" },
+  confirmDot: { width: "8px", height: "8px", borderRadius: "50%", flexShrink: 0 },
+  confirmName: { fontSize: "14px", color: "#F0EDE8" },
+  confirmType: { fontSize: "11px", color: "#555", fontFamily: "monospace" },
+  confirmActions: { display: "flex", gap: "12px" },
+  confirmBtn: { background: "#FFE66D", color: "#0D0D0D", border: "none", borderRadius: "8px", padding: "10px 24px", fontSize: "14px", fontWeight: "700", fontFamily: "monospace", cursor: "pointer" },
+  backBtn: { background: "transparent", color: "#888", border: "1px solid #333", borderRadius: "8px", padding: "10px 20px", fontSize: "14px", fontFamily: "monospace", cursor: "pointer" },
+  doneCard: { maxWidth: "480px", margin: "100px auto", textAlign: "center", padding: "40px" },
+  doneIcon: { fontSize: "48px", color: "#FFE66D", marginBottom: "20px" },
+  doneTitle: { fontSize: "28px", margin: "0 0 12px" },
+  doneText: { color: "#888", lineHeight: "1.7", marginBottom: "24px" },
+  doneFeeds: { display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center", marginBottom: "32px" },
+  donePill: { background: "#1A1900", border: "1px solid #FFE66D33", color: "#FFE66D", padding: "4px 12px", borderRadius: "100px", fontSize: "12px", fontFamily: "monospace" },
 };
-
